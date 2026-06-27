@@ -84,4 +84,20 @@
 
   RP.clamp = function (v, lo, hi) { return Math.max(lo, Math.min(hi, v)); };
 
+  // The date-input display format for THIS browser's locale, as a DD/MM/YYYY-style
+  // hint (so the label matches what the native picker actually shows).
+  RP.dateFormatHint = function () {
+    try {
+      // 25 Jan 2033 — all parts are distinct, unambiguous numbers.
+      var parts = new Intl.DateTimeFormat(undefined, { year: "numeric", month: "2-digit", day: "2-digit" })
+        .formatToParts(new Date(2033, 0, 25));
+      return parts.map(function (p) {
+        if (p.type === "day") return "DD";
+        if (p.type === "month") return "MM";
+        if (p.type === "year") return "YYYY";
+        return p.value; // separators
+      }).join("");
+    } catch (e) { return "DD/MM/YYYY"; }
+  };
+
 })(window.RP = window.RP || {});

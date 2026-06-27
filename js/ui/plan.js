@@ -139,7 +139,7 @@
     return '<div class="plan-intro card"><h2>Your hybrid 4-bucket plan — ' + RP.REGIONS[region].label + '</h2>' +
         '<p class="muted">A practical structure that separates money by <b>when you\'ll spend it</b>, so short-term needs never force you to sell long-term growth assets at the wrong time.</p>' +
         introCards +
-        '<div class="alloc-block"><div class="alloc-title">Suggested allocation of your corpus at retirement</div>' + allocBar + '</div>' +
+        '<div class="alloc-block"><div class="alloc-title">Suggested allocation of your corpus at retirement — ' + RP.money(acc.corpusTarget, region) + '</div>' + allocBar + '</div>' +
       '</div>' +
       '<div class="print-btn-row"><button class="btn" data-action="print">Print / Save this plan as PDF</button></div>' +
       prodTable("liquidity", allocR.liquidity) +

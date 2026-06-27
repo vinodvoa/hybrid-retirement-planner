@@ -10,7 +10,7 @@
     var cur = RP.REGIONS[region].currency.symbol;
 
     // Personal
-    var personal = U.dateField({ label: "Date of birth", field: "dob", value: p.dob, help: H.dob }) +
+    var personal = U.dateField({ label: "Date of birth (" + RP.dateFormatHint() + ")", field: "dob", value: p.dob, help: H.dob }) +
       U.field({ label: "Planned retirement age", field: "retirementAge", value: p.retirementAge, help: H.retirementAge, min: 30 }) +
       U.field({ label: "Life expectancy (age)", field: "lifeExpectancy", value: p.lifeExpectancy, help: H.lifeExpectancy, min: 60 });
 
