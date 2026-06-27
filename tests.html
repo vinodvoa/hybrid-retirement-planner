@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Retirement Planner — calculation tests</title>
+<style>
+  body { font-family: ui-monospace, Menlo, Consolas, monospace; background:#0e1116; color:#e6edf3; padding:24px; }
+  h1 { font-size:18px; } .pass { color:#3fb98a; } .fail { color:#e5604d; font-weight:700; }
+  .row { padding:3px 0; border-bottom:1px solid #222; }
+  #summary { margin:14px 0; font-size:16px; font-weight:700; }
+  small { color:#9aa7b5; }
+</style>
+</head>
+<body>
+<h1>Retirement Planner — calculation test harness</h1>
+<div id="summary"></div>
+<div id="out"></div>
+
+<script src="js/constants.js"></script>
+<script src="js/format.js"></script>
+<script src="js/calc/corpus.js"></script>
+<script src="js/calc/cpflife.js"></script>
+<script src="js/calc/tax.js"></script>
+<script src="js/calc/buckets.js"></script>
+<script src="js/calc/drawdown.js"></script>
+<script src="js/calc/risk.js"></script>
+<script>
+(function () {
+  var RP = window.RP, out = document.getElementById("out"), pass = 0, fail = 0;
+  function approx(a, b, tol) { return Math.abs(a - b) <= (tol === undefined ? 1 : tol); }
+  function t(name, got, want, tol) {
+    var ok = approx(got, want, tol);
+    ok ? pass++ : fail++;
+    out.insertAdjacentHTML("beforeend",
+      '<div class="row ' + (ok ? "pass" : "fail") + '">' + (ok ? "PASS" : "FAIL") + " — " + name +
+      ' <small>got=' + (Math.round(got * 1000) / 1000) + ' want≈' + want + '</small></div>');
+  }
+  function tb(name, cond) {
+    cond ? pass++ : fail++;
+    out.insertAdjacentHTML("beforeend",
+      '<div class="row ' + (cond ? "pass" : "fail") + '">' + (cond ? "PASS" : "FAIL") + " — " + name + '</div>');
+  }
+
+  // 1. Real rate
+  t("realRate(8%,6%) ≈ 1.8868%", RP.calc.realRate(8, 6) * 100, 1.8868, 0.001);
+
+  // 2. Corpus when real rate = 0 → E_R * n
+  t("corpusRequired rr=0 → E_R*n", RP.calc.corpusRequired({
+    lifeExpectancy: 85, retirementAge: 60, annualExpenseAtRetirement: 1200000,
+    returnRetire: 6, inflationRetire: 6 }), 1200000 * 25, 1);
+
+  // 3. SWR corpus
+  t("corpusBySWR(1.2M, 4%) = 30M", RP.calc.corpusBySWR(1200000, 4), 30000000, 1);
+
+  // 4. FV lump sum
+  t("fvLumpSum(100k,10%,10y)", RP.calc.fvLumpSum(100000, 10, 10), 259374.246, 0.5);
+
+  // 5. Expense at retirement
+  t("expenseAtRetirement(50k/mo,6%,20y)", RP.calc.expenseAtRetirement(50000, 6, 20), 1924281, 50);
+
+  // 6. Required SIP (annuity-due, 12%/yr, 120 months, gap 1M)
+  t("requiredSIP(1M,12%,120m) ≈ 4304", RP.calc.requiredSIP(1000000, 12, 120), 4304.2, 1);
+
+  // 7. requiredSIP with m≈0 falls back to gap/months
+  t("requiredSIP zero-return fallback", RP.calc.requiredSIP(120000, 0, 120), 1000, 0.01);
+
+  // 8. Singapore progressive tax on 50k chargeable = 1250
+  t("progressiveTax SG @50k = 1250", RP.calc.progressiveTax(50000, RP.TAX.singapore.incomeBrackets), 1250, 0.5);
+
+  // 9. progressiveTax 0 below first bracket
+  t("progressiveTax SG @18k = 0", RP.calc.progressiveTax(18000, RP.TAX.singapore.incomeBrackets), 0, 0.01);
+
+  // 10. Singapore has no capital gains tax in withdrawal engine (growth-heavy mix, no SRS)
+  t("SG withdrawal tax, 0 SRS portion = 0", RP.calc.withdrawalTax("singapore", 100000, { srsPortion: 0 }), 0, 0.01);
+
+  // 11. India equity LTCG exemption respected: withdrawal whose equity gain < 1.25L exemption → ~0 equity tax
+  // growth mix 1.0, gainFracEquity 0.5 → equityGain = withdrawal*0.5. For withdrawal=200000 → gain=100000 < 125000 → 0.
+  t("India LTCG under exemption ≈ 0", RP.calc.withdrawalTax("india", 200000, { mix: { growth: 1, income: 0, liquidity: 0 } }), 0, 0.01);
+
+  // 12. India equity LTCG above exemption taxed at 12.5%*1.04 cess.
+  // withdrawal=1,000,000 growth=1 → equityGain=500000; taxable=375000; tax=375000*0.125*1.04=48750.
+  t("India LTCG above exemption", RP.calc.withdrawalTax("india", 1000000, { mix: { growth: 1, income: 0, liquidity: 0 } }), 48750, 1);
+
+  // 13. targetAllocation: liquidity = years*expense, equity weight clamped
+  var al = RP.calc.targetAllocation(60, 30000000, 1200000, 2);
+  tb("targetAllocation liquidity = 2*expense", approx(al.liquidity, 2400000, 1));
+  tb("targetAllocation equityWeight clamped to 0.5 at age 60", approx(al.equityWeight, 0.5, 0.001));
+
+  // 14. Guardrail cut triggers when WR spikes
+  var gr = RP.calc.guardrail(120, 1000, 0.04, RP.BUCKETS.guardrails); // wr=0.12 >> 0.04*1.2
+  tb("guardrail cuts on high WR", gr.action === "cut" && gr.amount < 120);
+
+  // 15. Full drawdown: a well-funded plan lasts; an underfunded one depletes.
+  var well = RP.calc.runDrawdown({
+    region: "singapore", startCorpus: 2000000, retirementAge: 65, lifeExpectancy: 88,
+    firstYearExpense: 60000, inflationRetire: 2.5,
+    returns: { cash: 3, debt: 3.5, equity: 7 }, liquidityYears: 2, swr: 4,
+    useGuardrails: false, sorr: false, srsPortion: 0 });
+  tb("well-funded SG plan survives to 88", well.success === true);
+
+  var poor = RP.calc.runDrawdown({
+    region: "india", startCorpus: 5000000, retirementAge: 60, lifeExpectancy: 90,
+    firstYearExpense: 1500000, inflationRetire: 6,
+    returns: { cash: 4, debt: 7, equity: 12 }, liquidityYears: 2, swr: 4,
+    useGuardrails: false, sorr: false, srsPortion: 0 });
+  tb("under-funded India plan depletes early", poor.success === false && poor.depletedAtAge !== null);
+
+  // 16. Drawdown rows count = life - retirement
+  tb("drawdown rows = horizon length", well.rows.length === (88 - 65));
+
+  // 17. accumulation() integrates end-to-end without NaN
+  var acc = RP.calc.accumulation({
+    currentAge: 35, retirementAge: 60, lifeExpectancy: 85, monthlyExpense: 90000,
+    swr: 3.5, stepUpSip: 7, inflationPre: 6, inflationRetire: 6, returnPre: 11,
+    returnRetire: 8, returnEquity: 12, returnDebt: 7, returnCash: 4, liquidityYears: 2,
+    investmentsTotal: 7000000 });
+  tb("accumulation corpusTarget finite & positive", isFinite(acc.corpusTarget) && acc.corpusTarget > 0);
+  tb("accumulation sipLevel finite", isFinite(acc.sipLevel) && acc.sipLevel >= 0);
+  tb("step-up SIP starts lower than level SIP", acc.sipStepUp < acc.sipLevel);
+
+  // ---- CPF LIFE (v2) -------------------------------------------------------
+  // 18. cpfLifeMonthly: FRS Standard = 1730; Escalating = 0.8×; Basic = 0.95×.
+  t("CPF LIFE FRS Standard = 1730",
+    RP.calc.cpfLifeMonthly("singapore", { cpfLifeSum: "frs", cpfLifePlan: "standard", cpfLifePayoutOverride: "" }).monthly0, 1730, 0.5);
+  t("CPF LIFE FRS Escalating = 1384",
+    RP.calc.cpfLifeMonthly("singapore", { cpfLifeSum: "frs", cpfLifePlan: "escalating", cpfLifePayoutOverride: "" }).monthly0, 1384, 0.5);
+  t("CPF LIFE FRS Basic = 1643.5",
+    RP.calc.cpfLifeMonthly("singapore", { cpfLifeSum: "frs", cpfLifePlan: "basic", cpfLifePayoutOverride: "" }).monthly0, 1643.5, 0.5);
+  // 19. Override wins.
+  t("CPF LIFE override respected",
+    RP.calc.cpfLifeMonthly("singapore", { cpfLifeSum: "ers", cpfLifePlan: "standard", cpfLifePayoutOverride: "2500" }).monthly0, 2500, 0.5);
+  // 20. India → 0.
+  t("CPF LIFE India = 0",
+    RP.calc.cpfLifeMonthly("india", { cpfLifeSum: "frs", cpfLifePlan: "standard" }).monthly0, 0, 0.001);
+  // 21. Escalating plan carries escalation.
+  tb("Escalating plan escalation = 2",
+    RP.calc.cpfLifeMonthly("singapore", { cpfLifeSum: "frs", cpfLifePlan: "escalating", cpfLifePayoutOverride: "" }).escalation === 2);
+
+  // 22. cpfLifePV > 0; escalating PV > level PV for same monthly0.
+  var pvLevel = RP.calc.cpfLifePV(1730, 0, 65, 65, 90, 4);
+  var pvEsc = RP.calc.cpfLifePV(1730, 2, 65, 65, 90, 4);
+  tb("cpfLifePV positive", pvLevel > 0);
+  tb("escalating PV > level PV", pvEsc > pvLevel);
+  // 23. Earlier retirement (income deferred to 65) → smaller PV than retiring at 65.
+  var pvDeferred = RP.calc.cpfLifePV(1730, 0, 65, 55, 90, 4);
+  tb("deferred CPF LIFE PV < immediate PV", pvDeferred < pvLevel);
+
+  // 24. SG accumulation: CPF LIFE lowers required corpus vs 'none'.
+  var sgInpBase = {
+    currentAge: 40, retirementAge: 65, lifeExpectancy: 90, monthlyExpense: 5000,
+    swr: 4, stepUpSip: 4, inflationPre: 2.5, inflationRetire: 2.5, returnPre: 6,
+    returnRetire: 4.5, returnEquity: 7, returnDebt: 3.5, returnCash: 3, liquidityYears: 2,
+    investmentsTotal: 500000, investableCorpus: 500000 };
+  var accNone = RP.calc.accumulation(Object.assign({}, sgInpBase, { cpfLife: { monthly0: 0, escalation: 0, payoutAge: 65 } }));
+  var accFrs = RP.calc.accumulation(Object.assign({}, sgInpBase, { cpfLife: { monthly0: 1730, escalation: 0, payoutAge: 65 } }));
+  tb("CPF LIFE reduces corpus target", accFrs.corpusTarget < accNone.corpusTarget);
+  tb("CPF LIFE cpfPV positive in accumulation", accFrs.cpfPV > 0);
+
+  // 25. India accumulation unaffected by a (zero) CPF LIFE.
+  var inInp = Object.assign({}, sgInpBase, { cpfLife: { monthly0: 0, escalation: 0, payoutAge: 65 } });
+  var accIndiaNoCpf = RP.calc.accumulation(inInp);
+  tb("India corpus unchanged with zero CPF LIFE", Math.abs(accIndiaNoCpf.corpusTarget - accNone.corpusTarget) < 1);
+
+  // 26. Drawdown: post-65 corpus withdrawal reduced by CPF income; a borderline
+  // plan survives better WITH CPF LIFE than without.
+  var ddArgs = {
+    region: "singapore", startCorpus: 1100000, retirementAge: 65, lifeExpectancy: 90,
+    firstYearExpense: 60000, inflationRetire: 2.5,
+    returns: { cash: 3, debt: 3.5, equity: 7 }, liquidityYears: 2, swr: 4,
+    useGuardrails: false, sorr: false, srsPortion: 0 };
+  var ddNoCpf = RP.calc.runDrawdown(Object.assign({}, ddArgs, { cpfLife: { monthly0: 0, escalation: 0, payoutAge: 65 } }));
+  var ddCpf = RP.calc.runDrawdown(Object.assign({}, ddArgs, { cpfLife: { monthly0: 1730, escalation: 0, payoutAge: 65 } }));
+  tb("without CPF LIFE the plan depletes", ddNoCpf.success === false);
+  tb("with CPF LIFE the same corpus survives", ddCpf.success === true);
+  tb("CPF LIFE improves terminal corpus", ddCpf.terminalCorpus > ddNoCpf.terminalCorpus);
+  tb("drawdown rows carry cpfIncome at 65", ddCpf.rows[0].cpfIncome === 1730 * 12);
+  tb("first-year withdrawal is net of CPF LIFE", Math.abs(ddCpf.rows[0].withdrawal - (60000 - 1730 * 12)) < 1);
+
+  // ---- Rental / other retirement income (v3) -------------------------------
+  // 27. Other income lowers the required corpus (both regions).
+  var inNoInc = {
+    currentAge: 40, retirementAge: 60, lifeExpectancy: 88, monthlyExpense: 100000,
+    swr: 3.5, stepUpSip: 7, inflationPre: 6, inflationRetire: 6, returnPre: 11,
+    returnRetire: 8, returnEquity: 12, returnDebt: 7, returnCash: 4, liquidityYears: 2,
+    investmentsTotal: 5000000, investableCorpus: 5000000,
+    cpfLife: { monthly0: 0, escalation: 0, payoutAge: 65 }, otherIncomeMonthly: 0 };
+  var accNoInc = RP.calc.accumulation(inNoInc);
+  var accInc = RP.calc.accumulation(Object.assign({}, inNoInc, { otherIncomeMonthly: 30000 }));
+  tb("rental/other income lowers corpus target", accInc.corpusTarget < accNoInc.corpusTarget);
+  tb("accumulation exposes otherIncomeAnnual (grown to retirement)",
+    accInc.otherIncomeAnnual > 30000 * 12 && accInc.netExpenseAtRetirementAnnual < accInc.expenseAtRetirementAnnual);
+
+  // 28. Income covering all expenses drives net expense (hence corpus) to ~0.
+  var accFull = RP.calc.accumulation(Object.assign({}, inNoInc, { otherIncomeMonthly: 100000 }));
+  tb("income == expense → net expense 0", accFull.netExpenseAtRetirementAnnual === 0);
+
+  // 29. Drawdown: withdrawal is net of rental/other income; income recorded.
+  var ddInc = RP.calc.runDrawdown({
+    region: "india", startCorpus: 20000000, retirementAge: 60, lifeExpectancy: 85,
+    firstYearExpense: 1200000, inflationRetire: 6,
+    returns: { cash: 4, debt: 7, equity: 12 }, liquidityYears: 2, swr: 3.5,
+    useGuardrails: false, sorr: false, srsPortion: 0,
+    cpfLife: { monthly0: 0, escalation: 0, payoutAge: 65 }, otherIncomeAnnual: 300000 });
+  tb("drawdown rows carry otherIncome", ddInc.rows[0].otherIncome === 300000);
+  tb("first-year withdrawal net of other income", Math.abs(ddInc.rows[0].withdrawal - (1200000 - 300000)) < 1);
+  tb("other income grows with inflation in drawdown", Math.abs(ddInc.rows[1].otherIncome - 300000 * 1.06) < 1);
+
+  // 30. Combined: rental + CPF LIFE both offset (Singapore), withdrawal nets both at 65.
+  var ddBoth = RP.calc.runDrawdown({
+    region: "singapore", startCorpus: 1500000, retirementAge: 65, lifeExpectancy: 90,
+    firstYearExpense: 60000, inflationRetire: 2.5,
+    returns: { cash: 3, debt: 3.5, equity: 7 }, liquidityYears: 2, swr: 4,
+    useGuardrails: false, sorr: false, srsPortion: 0,
+    cpfLife: { monthly0: 1730, escalation: 0, payoutAge: 65 }, otherIncomeAnnual: 12000 });
+  tb("withdrawal nets BOTH rental and CPF LIFE at 65",
+    Math.abs(ddBoth.rows[0].withdrawal - (60000 - 12000 - 1730 * 12)) < 1);
+
+  // ---- Guardrail lines anchored to user withdrawal rate (v4) ---------------
+  var ddG = RP.calc.runDrawdown({
+    region: "india", startCorpus: 1000000, retirementAge: 60, lifeExpectancy: 85,
+    firstYearExpense: 50000, inflationRetire: 6,
+    returns: { cash: 4, debt: 7, equity: 12 }, liquidityYears: 2, swr: 4,
+    useGuardrails: true, sorr: false, srsPortion: 0,
+    cpfLife: { monthly0: 0, escalation: 0, payoutAge: 65 }, otherIncomeAnnual: 0 });
+  tb("cut line = swr*1.2 of opening corpus", Math.abs(ddG.rows[0].cutLine - 0.048 * ddG.rows[0].openCorpus) < 1);
+  tb("raise line = swr*0.8 of opening corpus", Math.abs(ddG.rows[0].raiseLine - 0.032 * ddG.rows[0].openCorpus) < 1);
+  // Planned year-1 withdrawal 50,000 = 5% of 1,000,000 > cut line 48,000 → cut.
+  tb("withdrawal above cut line triggers cut", ddG.rows[0].guardrail === "cut");
+  tb("target is the pre-guardrail draw", ddG.rows[0].target === 50000);
+  tb("cut: target above cut line, withdrawal = target*0.9",
+    ddG.rows[0].target > ddG.rows[0].cutLine && Math.abs(ddG.rows[0].withdrawal - ddG.rows[0].target * 0.9) < 1);
+  // A low planned rate (below the raise line) triggers a raise.
+  var ddR = RP.calc.runDrawdown({
+    region: "india", startCorpus: 2000000, retirementAge: 60, lifeExpectancy: 85,
+    firstYearExpense: 50000, inflationRetire: 6,
+    returns: { cash: 4, debt: 7, equity: 12 }, liquidityYears: 2, swr: 4,
+    useGuardrails: true, sorr: false, srsPortion: 0 });
+  // 50,000 / 2,000,000 = 2.5% < raise line 3.2% → raise.
+  tb("withdrawal below raise line triggers raise", ddR.rows[0].guardrail === "raise");
+  tb("raise: target below raise line, withdrawal = target*1.1",
+    ddR.rows[0].target < ddR.rows[0].raiseLine && Math.abs(ddR.rows[0].withdrawal - ddR.rows[0].target * 1.1) < 1);
+
+  document.getElementById("summary").innerHTML =
+    (fail === 0 ? '<span class="pass">ALL ' + pass + ' TESTS PASSED ✓</span>'
+                : '<span class="fail">' + fail + ' FAILED</span>, ' + pass + " passed");
+})();
+</script>
+</body>
+</html>
