@@ -15,18 +15,18 @@
       U.field({ label: "Life expectancy (age)", field: "lifeExpectancy", value: p.lifeExpectancy, help: H.lifeExpectancy, min: 60 });
 
     // Expenses & withdrawal
-    var expense = U.field({ label: "Current monthly expense", field: "monthlyExpense", value: p.monthlyExpense, help: H.monthlyExpense, suffix: cur, min: 0 }) +
+    var expense = U.field({ label: "Current monthly expense", field: "monthlyExpense", value: p.monthlyExpense, help: H.monthlyExpense, money: true, region: region }) +
       U.field({ label: "Withdrawal rate", field: "swr", value: p.swr, help: H.withdrawalRate, suffix: "%", step: 0.1 }) +
       U.field({ label: "Annual SIP step-up", field: "stepUpSip", value: p.stepUpSip, help: H.stepUpSip, suffix: "%", step: 0.5 });
 
     // Investments
-    var invest = U.field({ label: "Cash & equivalents", field: "cash", value: p.cash, help: H.cash, suffix: cur, min: 0 }) +
-      U.field({ label: "Debt / fixed income", field: "debt", value: p.debt, help: H.debt, suffix: cur, min: 0 }) +
-      U.field({ label: "Equity", field: "equity", value: p.equity, help: H.equity, suffix: cur, min: 0 });
+    var invest = U.field({ label: "Cash & equivalents", field: "cash", value: p.cash, help: H.cash, money: true, region: region }) +
+      U.field({ label: "Debt / fixed income", field: "debt", value: p.debt, help: H.debt, money: true, region: region }) +
+      U.field({ label: "Equity", field: "equity", value: p.equity, help: H.equity, money: true, region: region });
 
     // Region accounts
     var acctFields = RP.REGIONS[region].accountFields.map(function (f) {
-      return U.field({ label: f.label, field: "acct:" + f.id, value: p.accounts[f.id] || "", help: f.help, suffix: cur, min: 0 });
+      return U.field({ label: f.label, field: "acct:" + f.id, value: p.accounts[f.id] || "", help: f.help, money: true, region: region });
     }).join("");
 
     // Assumptions
@@ -38,14 +38,14 @@
       U.field({ label: "Return — cash", field: "returnCash", value: p.returnCash, help: H.returnCash, suffix: "%", step: 0.1 });
 
     // Insurance
-    var ins = U.field({ label: "Life cover (sum assured)", field: "insuranceLife", value: p.insuranceLife, help: H.insuranceLife, suffix: cur, min: 0 }) +
-      U.field({ label: "Health cover", field: "insuranceHealth", value: p.insuranceHealth, help: H.insuranceHealth, suffix: cur, min: 0 });
+    var ins = U.field({ label: "Life cover (sum assured)", field: "insuranceLife", value: p.insuranceLife, help: H.insuranceLife, money: true, region: region }) +
+      U.field({ label: "Health cover", field: "insuranceHealth", value: p.insuranceHealth, help: H.insuranceHealth, money: true, region: region });
 
     // Debts
-    var debts = U.field({ label: "Mortgage outstanding", field: "debtMortgage", value: p.debtMortgage, help: H.mortgage, suffix: cur, min: 0 }) +
-      U.field({ label: "Car loan", field: "debtCar", value: p.debtCar, help: H.carLoan, suffix: cur, min: 0 }) +
-      U.field({ label: "Education loan", field: "debtEdu", value: p.debtEdu, help: H.eduLoan, suffix: cur, min: 0 }) +
-      U.field({ label: "Personal / other loans", field: "debtPersonal", value: p.debtPersonal, help: H.personalLoan, suffix: cur, min: 0 });
+    var debts = U.field({ label: "Mortgage outstanding", field: "debtMortgage", value: p.debtMortgage, help: H.mortgage, money: true, region: region }) +
+      U.field({ label: "Car loan", field: "debtCar", value: p.debtCar, help: H.carLoan, money: true, region: region }) +
+      U.field({ label: "Education loan", field: "debtEdu", value: p.debtEdu, help: H.eduLoan, money: true, region: region }) +
+      U.field({ label: "Personal / other loans", field: "debtPersonal", value: p.debtPersonal, help: H.personalLoan, money: true, region: region });
 
     // CPF LIFE (Singapore only)
     var cpfLifeSection = "";
@@ -55,7 +55,7 @@
       var cpfBody =
         U.select({ label: "Retirement sum (sets your payout)", field: "cpfLifeSum", value: p.cpfLifeSum, options: sumOpts, help: H.cpfLifeSum }) +
         U.select({ label: "CPF LIFE plan", field: "cpfLifePlan", value: p.cpfLifePlan, options: planOpts, help: H.cpfLifePlan }) +
-        U.field({ label: "Override monthly payout (optional)", field: "cpfLifePayoutOverride", value: p.cpfLifePayoutOverride, help: H.cpfLifeOverride, suffix: cur, min: 0 });
+        U.field({ label: "Override monthly payout (optional)", field: "cpfLifePayoutOverride", value: p.cpfLifePayoutOverride, help: H.cpfLifeOverride, money: true, region: region });
       var payoutLine = '<div class="cpf-payout-line">Estimated CPF LIFE payout from age ' + RP.CPF_LIFE.payoutAge +
         ': <b>' + RP.money(d.acc.cpfMonthly, region) + '/mo</b>' +
         (d.acc.cpfMonthly > 0 ? ' <span class="muted small">(≈ ' + RP.money(d.acc.cpfMonthly * 12, region) + '/yr, tax-free — reduces the corpus you need)</span>' : '') + '</div>';

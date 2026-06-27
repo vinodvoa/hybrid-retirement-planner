@@ -29,8 +29,26 @@
     return sign + cur.symbol + grouped;
   };
 
-  // Compact form for big headline numbers: ₹1.23 Cr / S$1.23 M.
+  // Grouped integer WITHOUT the currency symbol (for input fields whose symbol
+  // is shown as a separate prefix). e.g. 9080000 -> "90,80,000" (India).
+  RP.groupNum = function (value, region) {
+    var cur = RP.REGIONS[region].currency;
+    var v = RP.parseNum(value);
+    var sign = v < 0 ? "-" : "";
+    var intStr = Math.abs(Math.round(v)).toString();
+    var grouped = cur.style === "indian" ? indianGroup(intStr) : westernGroup(intStr);
+    return sign + grouped;
+  };
+
+  // Headline / card / table amounts: full comma format with the currency symbol
+  // (₹ or S$) as a prefix — what the user reads everywhere.
   RP.moneyShort = function (value, region) {
+    return RP.money(value, region);
+  };
+
+  // Abbreviated form (₹1.23 Cr / S$1.23M) — ONLY for chart axis ticks, where a
+  // full comma'd number would be far too long.
+  RP.moneyAxis = function (value, region) {
     var cur = RP.REGIONS[region].currency;
     var v = value || 0;
     var sign = v < 0 ? "-" : "";

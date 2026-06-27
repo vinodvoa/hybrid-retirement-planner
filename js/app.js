@@ -88,7 +88,7 @@
       var el = e.target;
       if (el.hasAttribute("data-field")) {
         var field = el.getAttribute("data-field");
-        var val = el.type === "number" ? RP.parseNum(el.value) : el.value;
+        var val = (el.type === "number" || el.hasAttribute("data-money")) ? RP.parseNum(el.value) : el.value;
         if (field.indexOf("acct:") === 0) {
           RP.state.updateAccount(field.slice(5), val);
         } else {

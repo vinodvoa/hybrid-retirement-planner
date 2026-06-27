@@ -47,8 +47,8 @@
       return '<tr>' +
         '<td>' + U.esc(r.label) + '</td>' +
         '<td class="num muted">' + RP.money(r.proposed, region) + '</td>' +
-        '<td class="num"><input class="cell-input" type="number" min="0" data-budget="' + r.key + '" value="' +
-          U.esc(r.value) + '"' + (edited ? ' data-edited="1"' : "") + '></td>' +
+        '<td class="num"><input class="cell-input" type="text" inputmode="decimal" data-budget="' + r.key + '" value="' +
+          U.esc(RP.groupNum(r.value, region)) + '"' + (edited ? ' data-edited="1"' : "") + '></td>' +
       '</tr>';
     }).join("");
 
@@ -64,11 +64,11 @@
       '<tr class="income-row"><td>Rental income ' +
         U.help("Net monthly rent you expect in retirement, in today's money. Assumed to grow with inflation. Typical net yield on residential property ≈ 2–4% (SG) / 2–3% (India).") +
         '</td><td class="num muted">income</td>' +
-        '<td class="num"><input class="cell-input income" type="number" min="0" data-field="incomeRental" value="' + U.esc(incRental) + '"></td></tr>' +
+        '<td class="num"><input class="cell-input income" type="text" inputmode="decimal" data-money="1" data-field="incomeRental" value="' + U.esc(RP.groupNum(incRental, region)) + '"></td></tr>' +
       '<tr class="income-row"><td>Other income ' +
         U.help("Any other recurring monthly income in retirement (pension, annuity, part-time work, dividends, royalties), in today's money.") +
         '</td><td class="num muted">income</td>' +
-        '<td class="num"><input class="cell-input income" type="number" min="0" data-field="incomeOther" value="' + U.esc(incOther) + '"></td></tr>' +
+        '<td class="num"><input class="cell-input income" type="text" inputmode="decimal" data-money="1" data-field="incomeOther" value="' + U.esc(RP.groupNum(incOther, region)) + '"></td></tr>' +
       '<tr class="net-row"><td><b>Net monthly expense (after income)</b></td><td class="num muted">—</td>' +
         '<td class="num"><b>' + RP.money(netExpense, region) + '</b></td></tr>';
 
@@ -81,7 +81,7 @@
         '<tr class="income-row"><td>CPF LIFE payout (from age ' + RP.CPF_LIFE.payoutAge + ') ' +
           U.help("Lifelong, tax-free income from your selected CPF LIFE scheme. Edit to override the estimate. Before age 65 your corpus funds the full net amount.") +
         '</td><td class="num muted">income</td>' +
-        '<td class="num"><input class="cell-input income" type="number" min="0" data-field="cpfLifePayoutOverride" value="' + U.esc(Math.round(cpfMonthly)) + '"></td></tr>' +
+        '<td class="num"><input class="cell-input income" type="text" inputmode="decimal" data-money="1" data-field="cpfLifePayoutOverride" value="' + U.esc(RP.groupNum(cpfMonthly, region)) + '"></td></tr>' +
         '<tr class="net-row"><td><b>Net funded by corpus (from 65)</b></td><td class="num muted">—</td>' +
           '<td class="num"><b>' + RP.money(netCorpus, region) + '</b></td></tr>';
     }

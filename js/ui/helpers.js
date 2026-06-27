@@ -19,7 +19,26 @@
 
   // A number input row with label + help bubble.
   RP.ui.field = function (o) {
-    // o: {label, field, value, help, suffix, step, min, type}
+    // o: {label, field, value, help, suffix, step, min, type, money, region}
+    // money:true renders a comma-grouped text input with the currency symbol as
+    // a left prefix (e.g. "₹ 90,000"); editing stays simple (reformats on blur).
+    if (o.money) {
+      var sym = RP.REGIONS[o.region].currency.symbol;
+      var shown = (o.value === "" || o.value === undefined || o.value === null)
+        ? "" : RP.groupNum(o.value, o.region);
+      return '' +
+        '<label class="field">' +
+          '<span class="field-label">' + RP.ui.esc(o.label) +
+            (o.help ? " " + RP.ui.help(o.help) : "") + '</span>' +
+          '<span class="field-input has-prefix">' +
+            '<span class="prefix">' + RP.ui.esc(sym) + '</span>' +
+            '<input type="text" inputmode="decimal" data-money="1" data-field="' + o.field + '" value="' +
+              RP.ui.esc(shown) + '"' +
+              (o.placeholder ? ' placeholder="' + RP.ui.esc(o.placeholder) + '"' : "") +
+            '>' +
+          '</span>' +
+        '</label>';
+    }
     var type = o.type || "number";
     var suffix = o.suffix ? '<span class="suffix">' + RP.ui.esc(o.suffix) + '</span>' : "";
     return '' +

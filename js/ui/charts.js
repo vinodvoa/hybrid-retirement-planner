@@ -25,7 +25,7 @@
       var y = scaleY(v, maxY);
       g += '<line x1="' + PAD.l + '" y1="' + y + '" x2="' + (W - PAD.r) + '" y2="' + y + '" class="grid"/>';
       g += '<text x="' + (PAD.l - 8) + '" y="' + (y + 4) + '" text-anchor="end" class="axis-label">' +
-           RP.moneyShort(v, region) + '</text>';
+           RP.moneyAxis(v, region) + '</text>';
     }
     // x labels
     everyX = everyX || Math.ceil(labelsX.length / 8);
