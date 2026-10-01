@@ -58,7 +58,7 @@
   var state = {
     region: "india",
     profiles: { india: defaultProfile("india"), singapore: defaultProfile("singapore") },
-    ui: { activeTab: "inputs" },
+    ui: { activeTab: "budget" },
   };
 
   var listeners = [];

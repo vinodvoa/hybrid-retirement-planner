@@ -279,6 +279,9 @@ input[type=number] { -moz-appearance: textfield; }
 .sheet .income-row td { color: var(--good); }
 .sheet .income-row .cell-input.income { border-color: var(--good); color: var(--good); }
 .sheet .income-head td { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .3px; padding-top: 14px; border-bottom: 0; }
+.sheet .budget-group-head td { background: var(--card-2); color: var(--heading); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: .3px; border-top: 1px solid var(--line); }
+.sheet .budget-group-head td.num { color: var(--text); }
+.sheet td.budget-item { padding-left: 24px; color: var(--muted); }
 .sheet .net-row td { border-top: 1px dashed var(--line); }
 .cpf-banner { border: 1px solid var(--accent); }
 

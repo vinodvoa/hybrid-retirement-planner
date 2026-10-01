@@ -6,29 +6,36 @@
   RP.tabs = RP.tabs || {};
   RP.budget = {};
 
+  // scales = the tier/profile options that scale the whole budget;
+  // catGroups = the grouped, detailed line items.
   RP.budget.config = function (region) {
     return region === "india"
-      ? { groups: RP.BUDGET_INDIA.tiers, cats: RP.BUDGET_INDIA.categories, groupLabel: "Hometown / city tier" }
-      : { groups: RP.BUDGET_SINGAPORE.profiles, cats: RP.BUDGET_SINGAPORE.categories, groupLabel: "Housing & lifestyle" };
+      ? { scales: RP.BUDGET_INDIA.tiers, catGroups: RP.BUDGET_INDIA.groups, scaleLabel: "Hometown / city tier" }
+      : { scales: RP.BUDGET_SINGAPORE.profiles, catGroups: RP.BUDGET_SINGAPORE.groups, scaleLabel: "Housing & lifestyle" };
   };
 
-  // Proposed value for a category given the active group's factor.
-  RP.budget.proposed = function (region, catBase, p) {
+  RP.budget.scaleFactor = function (region, p) {
     var cfg = RP.budget.config(region);
-    var g = cfg.groups.filter(function (x) { return x.key === p.budgetKey; })[0] || cfg.groups[0];
-    return Math.round(catBase * g.factor);
+    var s = cfg.scales.filter(function (x) { return x.key === p.budgetKey; })[0] || cfg.scales[0];
+    return s.factor;
   };
 
+  // Compute grouped line items with per-group subtotals and the grand total.
   RP.budget.compute = function (region, p) {
     var cfg = RP.budget.config(region);
-    var rows = cfg.cats.map(function (c) {
-      var prop = RP.budget.proposed(region, c.base, p);
-      var ov = p.budgetOverrides[c.key];
-      var value = (ov === undefined || ov === "") ? prop : RP.parseNum(ov);
-      return { key: c.key, label: c.label, proposed: prop, value: value };
+    var f = RP.budget.scaleFactor(region, p);
+    var groups = cfg.catGroups.map(function (g) {
+      var rows = g.items.map(function (c) {
+        var prop = Math.round(c.base * f);
+        var ov = p.budgetOverrides[c.key];
+        var value = (ov === undefined || ov === "") ? prop : RP.parseNum(ov);
+        return { key: c.key, label: c.label, proposed: prop, value: value };
+      });
+      var subtotal = rows.reduce(function (s, r) { return s + r.value; }, 0);
+      return { key: g.key, label: g.label, rows: rows, subtotal: subtotal };
     });
-    var total = rows.reduce(function (s, r) { return s + r.value; }, 0);
-    return { rows: rows, total: total };
+    var total = groups.reduce(function (s, g) { return s + g.subtotal; }, 0);
+    return { groups: groups, total: total };
   };
 
   RP.tabs.budget = function (d) {
@@ -37,19 +44,25 @@
     var cfg = RP.budget.config(region);
     var comp = RP.budget.compute(region, p);
 
-    var groupOpts = cfg.groups.map(function (g) {
-      return '<option value="' + g.key + '"' + (g.key === p.budgetKey ? " selected" : "") + '>' +
-        RP.ui.esc(g.label) + '</option>';
+    var scaleOpts = cfg.scales.map(function (s) {
+      return '<option value="' + s.key + '"' + (s.key === p.budgetKey ? " selected" : "") + '>' +
+        RP.ui.esc(s.label) + '</option>';
     }).join("");
 
-    var rowsHtml = comp.rows.map(function (r) {
-      var edited = p.budgetOverrides[r.key] !== undefined && p.budgetOverrides[r.key] !== "";
-      return '<tr>' +
-        '<td>' + U.esc(r.label) + '</td>' +
-        '<td class="num muted">' + RP.money(r.proposed, region) + '</td>' +
-        '<td class="num"><input class="cell-input" type="text" inputmode="decimal" data-budget="' + r.key + '" value="' +
-          U.esc(RP.groupNum(r.value, region)) + '"' + (edited ? ' data-edited="1"' : "") + '></td>' +
-      '</tr>';
+    var rowsHtml = comp.groups.map(function (g) {
+      var head = '<tr class="budget-group-head"><td>' + U.esc(g.label) + '</td>' +
+        '<td class="num muted">—</td>' +
+        '<td class="num">' + RP.money(g.subtotal, region) + '</td></tr>';
+      var items = g.rows.map(function (r) {
+        var edited = p.budgetOverrides[r.key] !== undefined && p.budgetOverrides[r.key] !== "";
+        return '<tr>' +
+          '<td class="budget-item">' + U.esc(r.label) + '</td>' +
+          '<td class="num muted">' + RP.money(r.proposed, region) + '</td>' +
+          '<td class="num"><input class="cell-input" type="text" inputmode="decimal" data-budget="' + r.key + '" value="' +
+            U.esc(RP.groupNum(r.value, region)) + '"' + (edited ? ' data-edited="1"' : "") + '></td>' +
+        '</tr>';
+      }).join("");
+      return head + items;
     }).join("");
 
     // Retirement income (both regions): rental + other, reduces the net expense
@@ -88,15 +101,15 @@
 
     var sheet = '<div class="card">' +
       '<div class="budget-head">' +
-        '<label class="field inline"><span class="field-label">' + U.esc(cfg.groupLabel) + ' ' +
+        '<label class="field inline"><span class="field-label">' + U.esc(cfg.scaleLabel) + ' ' +
           U.help(region === "india"
             ? "Costs scale with city tier. Pick where you'll retire; figures adjust to local cost of living."
             : "Pick your housing & car situation; the budget scales accordingly.") +
-        '</span><select data-action="set-budget-group">' + groupOpts + '</select></label>' +
+        '</span><select data-action="set-budget-group">' + scaleOpts + '</select></label>' +
         U.toggle("Use this total as my monthly expense", "toggle-budget-link", p.budgetLinked) +
       '</div>' +
       '<table class="sheet">' +
-        '<thead><tr><th>Category</th><th class="num">Proposed</th><th class="num">Your figure (' + cur + '/mo)</th></tr></thead>' +
+        '<thead><tr><th>Line item</th><th class="num">Proposed</th><th class="num">Your figure (' + cur + '/mo)</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody>' +
         '<tfoot><tr><td><b>Total monthly</b></td><td class="num muted">—</td>' +
           '<td class="num"><b>' + RP.money(comp.total, region) + '</b></td></tr>' +

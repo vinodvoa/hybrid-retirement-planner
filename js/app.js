@@ -6,8 +6,8 @@
   RP.app = {};
 
   var TABS = [
-    { key: "inputs", label: "1 · Inputs" },
-    { key: "budget", label: "2 · Budget" },
+    { key: "budget", label: "1 · Budget" },
+    { key: "inputs", label: "2 · Inputs" },
     { key: "projection", label: "3 · Projection" },
     { key: "plan", label: "4 · Your Plan" },
     { key: "glossary", label: "5 · Glossary" },
