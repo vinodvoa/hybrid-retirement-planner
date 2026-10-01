@@ -72,7 +72,9 @@
     var totalIncome = incRental + incOther;
     var netExpense = Math.max(0, comp.total - totalIncome);
 
-    var incomeFoot =
+    // Income-entry rows live at the TOP of the table; the derived net summary
+    // stays at the bottom with the totals.
+    var incomeInputs =
       '<tr class="income-head"><td colspan="3">Income in retirement (reduces what your corpus must fund)</td></tr>' +
       '<tr class="income-row"><td>Rental income ' +
         U.help("Net monthly rent you expect in retirement, in today's money. Assumed to grow with inflation. Typical net yield on residential property ≈ 2–4% (SG) / 2–3% (India).") +
@@ -81,7 +83,9 @@
       '<tr class="income-row"><td>Other income ' +
         U.help("Any other recurring monthly income in retirement (pension, annuity, part-time work, dividends, royalties), in today's money.") +
         '</td><td class="num muted">income</td>' +
-        '<td class="num"><input class="cell-input income" type="text" inputmode="decimal" data-money="1" data-field="incomeOther" value="' + U.esc(RP.groupNum(incOther, region)) + '"></td></tr>' +
+        '<td class="num"><input class="cell-input income" type="text" inputmode="decimal" data-money="1" data-field="incomeOther" value="' + U.esc(RP.groupNum(incOther, region)) + '"></td></tr>';
+
+    var netExpenseRow =
       '<tr class="net-row"><td><b>Net monthly expense (after income)</b></td><td class="num muted">—</td>' +
         '<td class="num"><b>' + RP.money(netExpense, region) + '</b></td></tr>';
 
@@ -110,11 +114,11 @@
       '</div>' +
       '<table class="sheet">' +
         '<thead><tr><th>Line item</th><th class="num">Proposed</th><th class="num">Your figure (' + cur + '/mo)</th></tr></thead>' +
-        '<tbody>' + rowsHtml + '</tbody>' +
-        '<tfoot><tr><td><b>Total monthly</b></td><td class="num muted">—</td>' +
+        '<tbody>' + incomeInputs + rowsHtml + '</tbody>' +
+        '<tfoot><tr><td><b>Total monthly expenses</b></td><td class="num muted">—</td>' +
           '<td class="num"><b>' + RP.money(comp.total, region) + '</b></td></tr>' +
-          '<tr><td>Annual</td><td class="num muted">—</td><td class="num">' + RP.money(comp.total * 12, region) + '</td></tr>' +
-          incomeFoot +
+          '<tr><td>Annual expenses</td><td class="num muted">—</td><td class="num">' + RP.money(comp.total * 12, region) + '</td></tr>' +
+          netExpenseRow +
           cpfFoot +
         '</tfoot>' +
       '</table>' +
