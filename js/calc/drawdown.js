@@ -26,6 +26,8 @@
     var rDebt = opts.returns.debt / 100;
     var rEq = opts.returns.equity / 100;
     var infl = opts.inflationRetire / 100;
+    // Rental/other income grows at its own rate (default: general inflation).
+    var incG = ((opts.incomeGrowth != null) ? opts.incomeGrowth : opts.inflationRetire) / 100;
     var cpf0 = opts.cpfLife || { monthly0: 0, escalation: 0, payoutAge: 65 };
     var otherIncome0 = opts.otherIncomeAnnual || 0; // rental/other, at retirement
     var firstYearNet = Math.max(0, opts.firstYearExpense - otherIncome0 -
@@ -132,9 +134,9 @@
       var alloc2 = RP.calc.targetAllocation(age + 1, closeCorpus, withdrawal * (1 + infl), opts.liquidityYears);
       b = { liquidity: alloc2.liquidity, income: alloc2.income, growth: alloc2.growth };
 
-      // Next year's planned withdrawal and recurring income grow with inflation.
+      // Next year: expense grows with inflation, rental/other at its own rate.
       thisYearWithdrawal = thisYearWithdrawal * (1 + infl);
-      thisYearOtherIncome = thisYearOtherIncome * (1 + infl);
+      thisYearOtherIncome = thisYearOtherIncome * (1 + incG);
     }
 
     var terminal = rows.length ? rows[rows.length - 1].closeCorpus : opts.startCorpus;

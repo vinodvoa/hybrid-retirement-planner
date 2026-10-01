@@ -109,31 +109,36 @@
 
     var E_R = RP.calc.expenseAtRetirement(inp.monthlyExpense, inp.inflationPre, yearsToRetire);
 
-    // Rental / other recurring income from retirement age, grown to retirement
-    // (it grows with inflation thereafter, just like expenses). It reduces the
-    // NET expense the corpus must fund across the whole horizon.
+    // Rental / other recurring income from retirement age. It grows at its OWN
+    // rate (incomeGrowth, e.g. rents rising ~5%/yr) — not necessarily general
+    // inflation — so we value it as a present value and subtract it, keeping the
+    // corpus consistent with the year-by-year drawdown.
+    var incG = (inp.incomeGrowth != null) ? inp.incomeGrowth : inp.inflationPre;
     var otherIncomeMonthly = inp.otherIncomeMonthly || 0;
-    var otherIncomeAnnual = otherIncomeMonthly * 12 * Math.pow(1 + inp.inflationPre / 100, yearsToRetire);
+    var otherIncomeAnnual = otherIncomeMonthly * 12 * Math.pow(1 + incG / 100, yearsToRetire);
     var netE_R = Math.max(0, E_R - otherIncomeAnnual);
+    var rentalPV = RP.calc.cpfLifePV(otherIncomeAnnual / 12, incG,
+      inp.retirementAge, inp.retirementAge, inp.lifeExpectancy, inp.returnRetire);
 
-    // Corpus funding the NET expense (before any age-65 annuity income).
+    // Corpus funding the FULL expense (before any income offsets).
     var grossReal = RP.calc.corpusRequired({
       lifeExpectancy: inp.lifeExpectancy,
       retirementAge: inp.retirementAge,
-      annualExpenseAtRetirement: netE_R,
+      annualExpenseAtRetirement: E_R,
       returnRetire: inp.returnRetire,
       inflationRetire: inp.inflationRetire,
     });
-    var grossSWR = RP.calc.corpusBySWR(netE_R, inp.swr);
+    var grossSWR = RP.calc.corpusBySWR(E_R, inp.swr);
 
     // CPF LIFE (or any annuity income) offsets expenses → reduces required corpus.
-    // Subtract its present value from BOTH methods so they stay comparable.
+    // Subtract the present value of rental/other income AND CPF LIFE from BOTH
+    // methods so they stay comparable.
     var cpf = inp.cpfLife || { monthly0: 0, escalation: 0, payoutAge: 65 };
     var cpfPV = RP.calc.cpfLifePV(cpf.monthly0, cpf.escalation, cpf.payoutAge,
       inp.retirementAge, inp.lifeExpectancy, inp.returnRetire);
 
-    var corpusReal = Math.max(0, grossReal - cpfPV);
-    var corpusSWR = Math.max(0, grossSWR - cpfPV);
+    var corpusReal = Math.max(0, grossReal - rentalPV - cpfPV);
+    var corpusSWR = Math.max(0, grossSWR - rentalPV - cpfPV);
 
     // Use the larger (more conservative) of the two as the planning target.
     var corpusTarget = Math.max(corpusReal, corpusSWR);
@@ -154,6 +159,8 @@
       netExpenseAtRetirementAnnual: netE_R,
       otherIncomeAnnual: otherIncomeAnnual,
       otherIncomeMonthly: otherIncomeMonthly,
+      incomeGrowth: incG,
+      rentalPV: rentalPV,
       grossReal: grossReal,
       grossSWR: grossSWR,
       corpusReal: corpusReal,

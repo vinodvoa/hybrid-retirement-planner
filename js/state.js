@@ -26,6 +26,7 @@
       returnEquity: a.returnEquity,
       returnDebt: a.returnDebt,
       returnCash: a.returnCash,
+      incomeGrowth: a.incomeGrowth,
       liquidityYears: RP.BUCKETS.liquidityYears.default,
       // Investments (today)
       cash: regionKey === "india" ? 1000000 : 50000,
@@ -144,6 +145,7 @@
         returnEquity: RP.parseNum(p.returnEquity),
         returnDebt: RP.parseNum(p.returnDebt),
         returnCash: RP.parseNum(p.returnCash),
+        incomeGrowth: RP.parseNum(p.incomeGrowth),
         liquidityYears: RP.parseNum(p.liquidityYears),
         cash: cash, debt: debt, equity: equity, investmentsTotal: investmentsTotal,
         insuranceLife: RP.parseNum(p.insuranceLife),
@@ -187,6 +189,7 @@
         srsPortion: region === "singapore" ? 0.25 : 0,
         cpfLife: cpfLife,
         otherIncomeAnnual: acc.otherIncomeAnnual,
+        incomeGrowth: inp.incomeGrowth,
       };
       var base = RP.calc.runDrawdown(Object.assign({}, drawOpts, { sorr: false }));
       var sorr = RP.calc.runDrawdown(Object.assign({}, drawOpts, { sorr: true, sorrYears: 5, sorrReturnEquity: -8 }));

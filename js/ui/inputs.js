@@ -35,7 +35,8 @@
       U.field({ label: "Return — accumulation (blended)", field: "returnPre", value: p.returnPre, help: H.returnEquity, suffix: "%", step: 0.1 }) +
       U.field({ label: "Return — equity", field: "returnEquity", value: p.returnEquity, help: H.returnEquity, suffix: "%", step: 0.1 }) +
       U.field({ label: "Return — debt", field: "returnDebt", value: p.returnDebt, help: H.returnDebt, suffix: "%", step: 0.1 }) +
-      U.field({ label: "Return — cash", field: "returnCash", value: p.returnCash, help: H.returnCash, suffix: "%", step: 0.1 });
+      U.field({ label: "Return — cash", field: "returnCash", value: p.returnCash, help: H.returnCash, suffix: "%", step: 0.1 }) +
+      U.field({ label: "Rental / other income growth", field: "incomeGrowth", value: p.incomeGrowth, help: H.incomeGrowth, suffix: "%", step: 0.1 });
 
     // Insurance
     var ins = U.field({ label: "Life cover (sum assured)", field: "insuranceLife", value: p.insuranceLife, help: H.insuranceLife, money: true, region: region }) +

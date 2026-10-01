@@ -75,8 +75,6 @@
       : showCpf ? ' "Withdrawal" is net of CPF LIFE income.'
       : showOther ? ' "Withdrawal" is net of rental/other income.' : '';
     var g = RP.BUCKETS.guardrails;
-    var cutPctLabel = RP.pct(d.inp.swr * g.cutThreshold, 2);
-    var raisePctLabel = RP.pct(d.inp.swr * g.raiseThreshold, 2);
     var trs = rows.map(function (r) {
       return '<tr>' +
         '<td>' + r.age + '</td><td>' + r.year + '</td>' +
@@ -98,7 +96,7 @@
     var table = '<div class="card">' +
       '<div class="table-head"><h3 class="section-title">Year-by-year drawdown with ' + RP.pct(d.inp.swr) + ' withdrawal rate</h3>' +
         '<span class="muted small">Withdrawals come Liquidity → Income → Growth; buckets rebalance annually. Tax & returns by region assumptions.' +
-        netNote + ' <b>Target</b> is the inflation-adjusted draw (net of income) before guardrails. Guardrails (Guyton-Klinger): if Target falls below the <b>raise line</b> (' + raisePctLabel + ' of corpus) you spend 10% more; if it rises above the <b>cut line</b> (' + cutPctLabel + ' of corpus) you trim 10%. <b>Withdrawal</b> is what is actually drawn after that.</span></div>' +
+        netNote + ' <b>Target</b> is the inflation-adjusted draw (net of income) before guardrails are applied (see the box above); <b>Withdrawal</b> is what is actually drawn after. <b>Return</b> is the investment return (ROI) earned on the remaining corpus.</span></div>' +
       '<div class="table-scroll"><table class="sheet compact">' +
         '<thead><tr><th>Age</th><th>Year</th><th class="num">Opening</th>' +
           (showOther ? '<th class="num">Rental/other</th>' : "") +
@@ -110,6 +108,37 @@
         '<tbody>' + trs + '</tbody>' +
       '</table></div></div>';
 
+    // Explainer box: how the raise/cut lines are derived + the spending zone.
+    var swr = d.inp.swr;
+    var raise1 = (swr * g.raiseThreshold).toFixed(1) + "%";
+    var cut1 = (swr * g.cutThreshold).toFixed(1) + "%";
+    var diagramTmpl =
+      "Safe spending zone\n" +
+      "       <-------------------->\n" +
+      "\n" +
+      "RAISE LINE                 CUT LINE\n" +
+      "   2.8%                      4.2%\n" +
+      "     |                         |\n" +
+      "     |---- normal spending ----|\n" +
+      "\n" +
+      "Below 2.8%                 Above 4.2%\n" +
+      "Spend 10% more             Spend 10% less";
+    var diagram = diagramTmpl.split("2.8%").join(raise1).split("4.2%").join(cut1);
+
+    var guardBox = '<div class="card guard-box">' +
+      '<h3 class="section-title">How the raise &amp; cut lines work</h3>' +
+      '<p class="muted small">Guardrails flex your spending to protect the corpus. Both lines are a % of your corpus, derived from your <b>' + RP.pct(swr) + '</b> withdrawal rate:</p>' +
+      '<ul class="bullets small">' +
+        '<li><b>Raise line</b> = withdrawal rate × ' + g.raiseThreshold + ' = ' + RP.pct(swr) + ' × ' + g.raiseThreshold + ' = <b>' + raise1 + '</b> of corpus</li>' +
+        '<li><b>Cut line</b> = withdrawal rate × ' + g.cutThreshold + ' = ' + RP.pct(swr) + ' × ' + g.cutThreshold + ' = <b>' + cut1 + '</b> of corpus</li>' +
+      '</ul>' +
+      '<pre class="ascii-box">' + U.esc(diagram) + '</pre>' +
+      '<ul class="bullets small">' +
+        '<li>The <b>Return</b> column is the investment return (ROI) earned on your remaining corpus that year.</li>' +
+        (showOther ? '<li>Your <b>Rental / other</b> income grows at <b>' + RP.pct(d.acc.incomeGrowth) + '</b> a year (set under <b>Inputs → Inflation &amp; returns</b>), kept separate from general inflation.</li>' : '') +
+      '</ul>' +
+    '</div>';
+
     var controls = '<div class="card controls-row">' +
       U.toggle("Sequence-of-returns stress (poor first 5 yrs)", "toggle-sorr", d.p.sorr) +
       U.toggle("Guyton-Klinger guardrails", "toggle-guardrails", d.p.useGuardrails) +
@@ -118,7 +147,7 @@
 
     return cards + controls + methods +
       '<div class="chart-grid">' + accChart + ddChart + '</div>' +
-      bucketChart + table;
+      bucketChart + guardBox + table;
   };
 
 })(window.RP = window.RP || {});

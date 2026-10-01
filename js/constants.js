@@ -38,6 +38,7 @@
         returnPreBlend: 11.0,     // default accumulation blended (mostly equity)
         returnRetireBlend: 8.0,   // default in-retirement blended (post-tax-ish)
         swr: 3.5,                 // safe withdrawal rate (%) — conservative for India inflation
+        incomeGrowth: 5.0,        // rental/other income growth (rents typically lag CPI)
         lifeExpectancy: 85,
         retirementAge: 60,
         stepUpSip: 7.0,           // typical annual income/SIP step-up
@@ -79,6 +80,7 @@
         returnPreBlend: 6.0,
         returnRetireBlend: 4.5,
         swr: 4.0,                 // classic 4% rule; lower SG inflation supports it
+        incomeGrowth: 5.0,        // rental/other income growth
         lifeExpectancy: 88,       // SG longevity is high
         retirementAge: 65,        // statutory; CPF payout eligibility age
         stepUpSip: 4.0,
@@ -412,6 +414,7 @@
     cpf: "Singapore: OA ≥2.5%, SA/RA ~4%. RA funds CPF LIFE from 65.",
     srs: "Tax-deferred wrapper. Contributions cut taxable income; only 50% of withdrawals taxed at retirement.",
     stepUpSip: "Raise your monthly investment each year as income grows. 5–10% typical.",
+    incomeGrowth: "How fast your rental / other income rises each year in retirement. Rents usually lag general inflation — 4–5% is typical. Kept separate from CPI so income doesn't track medical-heavy inflation.",
     cpfLifeSum: "The retirement sum you'll set aside at 55 sets your RA at 65 and thus your payout. 2025: BRS≈$930/mo, FRS≈$1,730/mo, ERS≈$3,300/mo. Pick 'none' if not a CPF member.",
     cpfLifePlan: "Standard: level payout. Basic: lower payout, larger bequest. Escalating: starts ~20% lower but rises 2%/yr to fight inflation.",
     cpfLifeOverride: "Override the estimate with your own figure from the official CPF LIFE Estimator (cpf.gov.sg). Leave blank to use the table estimate.",
